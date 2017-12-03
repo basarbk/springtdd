@@ -2,6 +2,8 @@ package com.example.demo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -9,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -33,21 +36,32 @@ public class CarControllerTest {
 	
 	@Test
 	public void shouldReturnEmptyList(){
-		ResponseEntity<Object> response= testRestTemplate.getForEntity("/api/cars", Object.class);
+		ResponseEntity<List<Car>> response= testRestTemplate.exchange("/api/cars", HttpMethod.GET, null, new ParameterizedTypeReference<List<Car>>() {});
 		assertThat(response.getStatusCodeValue()).isEqualTo(200);
+		assertThat(response.getBody().size()).isEqualTo(0);
+	}
+	
+	@Test
+	public void shouldReturnListWithData(){
+		carDao.save(new Car(0L, "tesla","model s",121312));
+		ResponseEntity<List<Car>> response= testRestTemplate.exchange("/api/cars", HttpMethod.GET, null, new ParameterizedTypeReference<List<Car>>() {});
+		assertThat(response.getStatusCodeValue()).isEqualTo(200);
+		assertThat(response.getBody().size()).isEqualTo(1);
 	}
 
 	@Test
 	public void shouldReturn404ForUnknownId(){
-		ResponseEntity<Object> response= testRestTemplate.getForEntity("/api/cars/1", Object.class);
+		ResponseEntity<Error> response= testRestTemplate.getForEntity("/api/cars/1", Error.class);
 		assertThat(response.getStatusCodeValue()).isEqualTo(404);
+		assertThat(response.getBody().getMessage()).isEqualTo("Car not found");
 	}
 	
 	@Test
 	public void shouldReturnCarWithKnownId(){
 		Car car = carDao.save(new Car(0L, "tesla","model s",121312));
-		ResponseEntity<Object> response= testRestTemplate.getForEntity("/api/cars/"+car.getId(), Object.class);
+		ResponseEntity<Car> response= testRestTemplate.getForEntity("/api/cars/"+car.getId(), Car.class);
 		assertThat(response.getStatusCodeValue()).isEqualTo(200);
+		assertThat(response.getBody().getBrand()).isEqualTo("tesla");
 	}
 	
 	@Test
